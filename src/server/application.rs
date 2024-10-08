@@ -1,3 +1,1 @@
-pub async fn run_application(){
-
-}
+pub async fn run_application() {}

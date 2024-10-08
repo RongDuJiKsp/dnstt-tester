@@ -1,3 +1,85 @@
-pub async fn run_application(){
+use crate::common::log::Log;
+use crate::common::random::RandomPacker;
+use anyhow::anyhow;
+use clap::Parser;
+use std::time::Duration;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
+use tokio::process::{Child, Command};
+use tokio::select;
+use tokio::time::sleep;
 
+#[derive(Debug, Parser)]
+struct ClientArgs {
+    //dnstt 将要执行的端口号
+    #[arg(short, long)]
+    port: u16,
+    //dnstt 运行脚本，接受一个参数，为端口号
+    #[arg(short, long)]
+    shell: String,
+    //定时切断连接的时间
+    #[arg(short, long)]
+    reconnect_time_second: u64,
+    //定时发送随机文件的时间间隔
+    #[arg(short, long)]
+    make_file_second: u64,
+    //发送文件的大小范围，格式为xx~xx 单位为字节
+    #[arg(short, long)]
+    file_size_range: String,
+}
+impl ClientArgs {
+    fn file_size(&self) -> (u64, u64) {
+        let mut i = self.file_size_range.split("~");
+        let left_size: u64 = i.next().expect("文件大小格式不对！").try_into().unwrap();
+        let right_size: u64 = i.next().expect("文件大小格式不对！").try_into().unwrap();
+        if left_size < right_size {
+            (left_size, right_size)
+        } else {
+            (right_size, left_size)
+        }
+    }
+}
+//client端 启动dnstt client并且主动发起连接
+async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(Child, TcpStream)> {
+    let child = Command::new("sh")
+        .arg(arg.shell.clone())
+        .arg(arg.port.to_string())
+        .spawn()
+        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+    sleep(Duration::from_secs(5)).await;
+    let tcp = TcpStream::connect(format!("localhost:{}", arg.port))
+        .await
+        .map_err(|e| anyhow!("Failed to create tcp conn :{}", e))?;
+    Ok((child, tcp))
+}
+async fn reconnect(
+    client: &mut Child,
+    stream: &mut TcpStream,
+    arg: &ClientArgs,
+) -> anyhow::Result<()> {
+    client.kill()?;
+    let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
+    *client = c;
+    *stream = t;
+    Ok(())
+}
+async fn send_file(stream: &mut TcpStream, rand: &mut RandomPacker) -> anyhow::Result<()> {
+    stream.write_all(&rand.random_bytes()).await?;
+    Ok(())
+}
+pub async fn run_application() {
+    let arg = ClientArgs::parse();
+    let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg);
+    let (m_in, m_ax) = arg.file_size();
+    let mut rand = RandomPacker::new(m_in, m_ax);
+    select! {
+        _=sleep(Duration::from_secs(arg.make_file_second))=>{
+            let r= send_file(&mut stream,&mut rand).await;
+            Log::error_if_err(r);
+        }
+        _=sleep(Duration::from_secs(arg.reconnect_time_second))=>{
+            let r= reconnect(&mut client,&mut stream,& arg).await;
+            Log::error_if_err(r);
+        }
+    }
 }
