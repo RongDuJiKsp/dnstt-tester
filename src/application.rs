@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use std::env;
 const SIDE_TIPS: &str = "\
 Err: No Side To Run

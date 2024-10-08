@@ -1,15 +1,14 @@
-use std::future::Future;
-use std::time::Duration;
 use anyhow::anyhow;
 use clap::Parser;
 use log::{error, info, warn};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
+use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::{Child, Command};
-use tokio::time::sleep;
 
 #[derive(Parser)]
 struct ServerArgs {
+    //side 是需要运行的端点，可以是client or server
+    side: String,
     //dnstt 将要执行的端口号
     #[arg(short, long)]
     port: u16,
@@ -34,7 +33,7 @@ async fn loop_read(mut stream: TcpStream) {
                 }
             }
             Err(e) => {
-                error!("Client Read Err:{}",e);
+                error!("Client Read Err:{}", e);
                 return;
             }
         }
@@ -42,16 +41,18 @@ async fn loop_read(mut stream: TcpStream) {
 }
 pub async fn run_application() {
     let arg = ServerArgs::parse();
-    let tcp = TcpListener::bind(&format!("localhost:{}", arg.port)).await.unwrap();
+    let tcp = TcpListener::bind(&format!("localhost:{}", arg.port))
+        .await
+        .unwrap();
     tokio::spawn(async move {
         let mut server = new_server(&arg).await.unwrap();
         loop {
             let w = server.wait().await;
-            warn!("dnstt exited because {:#?}",w);
+            warn!("dnstt exited because {:#?}", w);
             server = match new_server(&arg).await {
                 Ok(e) => e,
                 Err(e) => {
-                    error!("Start DNSTT Server fail :{},Retrying",e);
+                    error!("Start DNSTT Server fail :{},Retrying", e);
                     continue;
                 }
             }
@@ -60,9 +61,9 @@ pub async fn run_application() {
     loop {
         let (stream, addr) = match tcp.accept().await {
             Ok(e) => e,
-            Err(_) => continue
+            Err(_) => continue,
         };
-        info!("New Client Conn :{}",addr);
+        info!("New Client Conn :{}", addr);
         tokio::spawn(async move {
             loop_read(stream).await;
             println!("Connection closed: {:?}", addr);

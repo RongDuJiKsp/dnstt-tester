@@ -1,8 +1,8 @@
-use std::str::FromStr;
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use anyhow::anyhow;
 use clap::Parser;
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
@@ -12,6 +12,8 @@ use tokio::time::sleep;
 
 #[derive(Debug, Parser)]
 struct ClientArgs {
+    //side 是需要运行的端点，可以是client or server
+    side: String,
     //dnstt 将要执行的端口号
     #[arg(short, long)]
     port: u16,
