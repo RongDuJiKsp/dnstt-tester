@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use anyhow::anyhow;
@@ -30,8 +31,8 @@ struct ClientArgs {
 impl ClientArgs {
     fn file_size(&self) -> (u64, u64) {
         let mut i = self.file_size_range.split("~");
-        let left_size: u64 = i.next().expect("文件大小格式不对！").try_into().unwrap();
-        let right_size: u64 = i.next().expect("文件大小格式不对！").try_into().unwrap();
+        let left_size: u64 = u64::from_str(i.next().expect("文件大小格式不对！")).unwrap();
+        let right_size: u64 = u64::from_str(i.next().expect("文件大小格式不对！")).unwrap();
         if left_size < right_size {
             (left_size, right_size)
         } else {
@@ -57,8 +58,8 @@ async fn reconnect(
     stream: &mut TcpStream,
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
-    client.kill()?;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
+    client.kill().await?;
     *client = c;
     *stream = t;
     Ok(())
@@ -69,9 +70,9 @@ async fn send_file(stream: &mut TcpStream, rand: &mut RandomPacker) -> anyhow::R
 }
 pub async fn run_application() {
     let arg = ClientArgs::parse();
-    let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg);
     let (m_in, m_ax) = arg.file_size();
     let mut rand = RandomPacker::new(m_in, m_ax);
+    let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
     select! {
         _=sleep(Duration::from_secs(arg.make_file_second))=>{
             let r= send_file(&mut stream,&mut rand).await;

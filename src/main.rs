@@ -9,5 +9,5 @@ fn main() {
     sync_init();
     tokio::runtime::Runtime::new()
         .unwrap()
-        .block_on(application::run_application)
+        .block_on(application::run_application())
 }
