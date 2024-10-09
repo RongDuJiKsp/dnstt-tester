@@ -23,7 +23,7 @@ struct ClientArgs {
     #[arg(short, long)]
     exe: String,
     //dnstt 可执行文件参数，端口号可用 $[port] 代替
-    #[arg(short, long, value_parser)]
+    #[arg(short, long, allow_hyphen_values = true)]
     args: String,
     //定时切断连接的时间
     #[arg(short, long)]
