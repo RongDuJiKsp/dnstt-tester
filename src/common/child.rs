@@ -5,7 +5,7 @@ use tokio::process::{Child, Command};
 pub fn load_env_and_run(exe: &str, arg: &str, port: u16) -> io::Result<Child> {
     Command::new(exe)
         .args(
-            arg.replace("$[port]", &port.to_string())
+            arg.replace("&[port]", &port.to_string())
                 .split(" ")
                 .collect::<Vec<_>>(),
         )
