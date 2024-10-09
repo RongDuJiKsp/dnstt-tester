@@ -41,7 +41,7 @@ async fn loop_read(mut stream: TcpStream) {
 }
 pub async fn run_application() {
     let arg = ServerArgs::parse();
-    let tcp = TcpListener::bind(&format!("localhost:{}", arg.port))
+    let tcp = TcpListener::bind(&format!("127.0.0.1:{}", arg.port))
         .await
         .unwrap();
     tokio::spawn(async move {
