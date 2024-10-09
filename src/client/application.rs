@@ -3,7 +3,6 @@ use crate::common::random::RandomPacker;
 use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
-use nix::unistd::Pid;
 use std::process::Stdio;
 use std::str::FromStr;
 use std::time::Duration;
@@ -20,9 +19,12 @@ struct ClientArgs {
     //dnstt 将要执行的端口号
     #[arg(short, long)]
     port: u16,
-    //dnstt 运行脚本，接受一个参数，为端口号
+    //dnstt 可执行文件名称，接受一个参数，为端口号
     #[arg(short, long)]
-    shell: String,
+    exe: String,
+    //dnstt 可执行文件参数，端口号可用 ${port} 代替
+    #[arg(short, long)]
+    args: String,
     //定时切断连接的时间
     #[arg(short, long)]
     reconnect_time_second: u64,
@@ -50,9 +52,14 @@ impl ClientArgs {
 }
 //client端 启动dnstt client并且主动发起连接
 async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(Child, TcpStream)> {
-    let child = Command::new("sh")
-        .arg(arg.shell.clone())
-        .arg(arg.port.to_string())
+    let child = Command::new("")
+        .arg(arg.exe.clone())
+        .args(
+            arg.args
+                .replace("${port}", &arg.port.to_string())
+                .split(" ")
+                .collect::<Vec<_>>(),
+        )
         .kill_on_drop(true)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -66,24 +73,15 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     println!("start client and conn successfully");
     Ok((child, tcp))
 }
-async fn kill_ch(c: &mut Child) -> anyhow::Result<()> {
-    let pid = Pid::from_raw(c.id().ok_or(anyhow!("NO id"))? as i32);
-    let r = Command::new("kill")
-        .arg("-9")
-        .arg(pid.to_string())
-        .spawn()?
-        .wait()
-        .await?;
-    println!("Kill {}", r.success());
-    Ok(())
-}
+
 async fn reconnect(
     client: &mut Child,
     stream: &mut TcpStream,
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
     stream.shutdown().await?;
-    kill_ch(client).await?;
+    let _ = client.kill().await;
+    let _ = client.wait().await;
     println!("Waiting To Restart");
     sleep(Duration::from_secs(arg.conn_time_second)).await;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
