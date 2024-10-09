@@ -10,6 +10,7 @@ use tokio::net::TcpStream;
 use tokio::process::{Child, Command};
 use tokio::select;
 use tokio::time::sleep;
+use crate::common::timer::Timer;
 
 #[derive(Debug, Parser)]
 struct ClientArgs {
@@ -80,14 +81,16 @@ pub async fn run_application() {
     let (m_in, m_ax) = arg.file_size();
     let mut rand = RandomPacker::new(m_in, m_ax);
     let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
+    let mut make_file_timer = Timer::timer(Duration::from_secs(arg.make_file_second));
+    let mut reconnect_timer = Timer::timer(Duration::from_secs(arg.reconnect_time_second));
     loop {
         select! {
-            _=sleep(Duration::from_secs(arg.make_file_second))=>{
+            _=make_file_timer.tick()=>{
                 let r= send_file(&mut stream,&mut rand).await;
                 println!("tick to make file");
                 Log::error_if_err(r);
             }
-            _=sleep(Duration::from_secs(arg.reconnect_time_second))=>{
+            _=reconnect_timer.tick()=>{
                 let r= reconnect(&mut client,&mut stream,& arg).await;
                 println!("tick to restart");
                 Log::error_if_err(r);
