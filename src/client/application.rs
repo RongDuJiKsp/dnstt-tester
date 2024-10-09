@@ -1,3 +1,4 @@
+use std::process::Stdio;
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use anyhow::anyhow;
@@ -49,6 +50,9 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
         .arg(arg.shell.clone())
         .arg(arg.port.to_string())
         .kill_on_drop(true)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
         .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;

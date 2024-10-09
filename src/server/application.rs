@@ -1,6 +1,7 @@
+use std::process::Stdio;
 use anyhow::anyhow;
 use clap::Parser;
-use log::{error, info, warn};
+use log::{error, info, log, warn};
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::{Child, Command};
@@ -20,6 +21,9 @@ async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
     Command::new("sh")
         .arg(args.shell.clone())
         .arg(args.port.to_string())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .kill_on_drop(true)
         .spawn()
         .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
@@ -30,6 +34,7 @@ async fn loop_read(mut stream: TcpStream) {
         match stream.read(&mut buf).await {
             Ok(size) => {
                 if size == 0 {
+                    info!("Client Read Close");
                     return;
                 }
             }
@@ -47,6 +52,7 @@ pub async fn run_application() {
         .unwrap();
     tokio::spawn(async move {
         let mut server = new_server(&arg).await.unwrap();
+        info!("dnstt Server Created");
         loop {
             let w = server.wait().await;
             warn!("dnstt exited because {:#?}", w);
