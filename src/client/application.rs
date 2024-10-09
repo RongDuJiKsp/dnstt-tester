@@ -74,6 +74,7 @@ async fn reconnect(
     sleep(Duration::from_secs(2)).await;
     client.kill().await?;
     sleep(Duration::from_secs(2)).await;
+    let _ = client.wait().await;
     println!("Waiting To Restart");
     sleep(Duration::from_secs(arg.conn_time_second)).await;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
