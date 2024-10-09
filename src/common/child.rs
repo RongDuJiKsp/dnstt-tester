@@ -7,6 +7,7 @@ pub fn load_env_and_run(exe: &str, arg: &str, port: u16) -> io::Result<Child> {
         .args(
             arg.replace("&[port]", &port.to_string())
                 .split(" ")
+                .filter(|x| *x != "")
                 .collect::<Vec<_>>(),
         )
         .kill_on_drop(true)
