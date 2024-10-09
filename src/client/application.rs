@@ -86,7 +86,7 @@ pub async fn run_application() {
         }
         _=sleep(Duration::from_secs(arg.reconnect_time_second))=>{
             let r= reconnect(&mut client,&mut stream,& arg).await;
-            info!("tick to restart")
+            info!("tick to restart");
             Log::error_if_err(r);
         }
     }
