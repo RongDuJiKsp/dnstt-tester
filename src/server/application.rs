@@ -1,9 +1,11 @@
 use crate::common::child::load_env_and_run;
 use anyhow::anyhow;
 use clap::Parser;
+use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
+use tokio::time;
 
 #[derive(Parser)]
 struct ServerArgs {
@@ -51,6 +53,8 @@ pub async fn run_application() {
         loop {
             let w = server.wait().await;
             println!("dnstt exited because {:#?}", w);
+            time::sleep(Duration::from_secs(4)).await;
+            println!("restarting");
             server = match new_server(&arg).await {
                 Ok(e) => e,
                 Err(e) => {

@@ -12,6 +12,5 @@ pub fn load_env_and_run(exe: &str, arg: &str, port: u16) -> io::Result<Child> {
         .kill_on_drop(true)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
         .spawn()
 }
