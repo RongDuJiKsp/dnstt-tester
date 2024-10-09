@@ -16,7 +16,7 @@ struct ServerArgs {
     #[arg(short, long)]
     exe: String,
     //dnstt 可执行文件参数，端口号可用 $[port] 代替
-    #[arg(short, long)]
+    #[arg(short, long, value_parser)]
     args: String,
 }
 async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
