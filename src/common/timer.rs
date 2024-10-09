@@ -1,9 +1,7 @@
-use std::future::Future;
 use std::mem;
 use std::time::Duration;
 use tokio::select;
 use tokio::sync::{mpsc, oneshot};
-use tokio::task::JoinHandle;
 use tokio::time::sleep;
 
 pub struct Timer {
@@ -18,7 +16,7 @@ impl Timer {
             loop {
                 select! {
                     _=sleep(d)=>{
-                        if let Err(e) = tx.send(0).await {
+                        if let Err(_) = tx.send(0).await {
                             return;
                         }
                     }

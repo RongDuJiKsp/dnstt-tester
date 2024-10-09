@@ -1,5 +1,6 @@
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
+use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
 use std::process::Stdio;
@@ -10,7 +11,6 @@ use tokio::net::TcpStream;
 use tokio::process::{Child, Command};
 use tokio::select;
 use tokio::time::sleep;
-use crate::common::timer::Timer;
 
 #[derive(Debug, Parser)]
 struct ClientArgs {
