@@ -47,6 +47,7 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     let child = Command::new("sh")
         .arg(arg.shell.clone())
         .arg(arg.port.to_string())
+        .kill_on_drop(true)
         .spawn()
         .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(5)).await;
@@ -61,7 +62,6 @@ async fn reconnect(
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
-    client.kill().await?;
     *client = c;
     *stream = t;
     Ok(())

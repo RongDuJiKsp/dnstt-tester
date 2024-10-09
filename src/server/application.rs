@@ -20,6 +20,7 @@ async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
     Command::new("sh")
         .arg(args.shell.clone())
         .arg(args.port.to_string())
+        .kill_on_drop(true)
         .spawn()
         .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
 }
