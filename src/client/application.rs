@@ -1,11 +1,10 @@
-use std::process::Stdio;
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use anyhow::anyhow;
 use clap::Parser;
+use std::process::Stdio;
 use std::str::FromStr;
 use std::time::Duration;
-use log::info;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::process::{Child, Command};
@@ -59,7 +58,7 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     let tcp = TcpStream::connect(format!("127.0.0.1:{}", arg.port))
         .await
         .map_err(|e| anyhow!("Failed to create tcp conn :{}", e))?;
-    info!("start client and conn successfully");
+    println!("start client and conn successfully");
     Ok((child, tcp))
 }
 async fn reconnect(
@@ -83,16 +82,16 @@ pub async fn run_application() {
     let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
     loop {
         select! {
-        _=sleep(Duration::from_secs(arg.make_file_second))=>{
-            let r= send_file(&mut stream,&mut rand).await;
-            info!("tick to make file");
-            Log::error_if_err(r);
+            _=sleep(Duration::from_secs(arg.make_file_second))=>{
+                let r= send_file(&mut stream,&mut rand).await;
+                println!("tick to make file");
+                Log::error_if_err(r);
+            }
+            _=sleep(Duration::from_secs(arg.reconnect_time_second))=>{
+                let r= reconnect(&mut client,&mut stream,& arg).await;
+                println!("tick to restart");
+                Log::error_if_err(r);
+            }
         }
-        _=sleep(Duration::from_secs(arg.reconnect_time_second))=>{
-            let r= reconnect(&mut client,&mut stream,& arg).await;
-            info!("tick to restart");
-            Log::error_if_err(r);
-        }
-    }
     }
 }

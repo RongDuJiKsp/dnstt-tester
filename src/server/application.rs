@@ -1,7 +1,6 @@
-use std::process::Stdio;
 use anyhow::anyhow;
 use clap::Parser;
-use log::{error, info, warn};
+use std::process::Stdio;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::{Child, Command};
@@ -34,12 +33,12 @@ async fn loop_read(mut stream: TcpStream) {
         match stream.read(&mut buf).await {
             Ok(size) => {
                 if size == 0 {
-                    info!("Client Read Close");
+                    println!("Client Read Close");
                     return;
                 }
             }
             Err(e) => {
-                error!("Client Read Err:{}", e);
+                println!("Client Read Err:{}", e);
                 return;
             }
         }
@@ -52,14 +51,14 @@ pub async fn run_application() {
         .unwrap();
     tokio::spawn(async move {
         let mut server = new_server(&arg).await.unwrap();
-        info!("dnstt Server Created");
+        println!("dnstt Server Created");
         loop {
             let w = server.wait().await;
-            warn!("dnstt exited because {:#?}", w);
+            println!("dnstt exited because {:#?}", w);
             server = match new_server(&arg).await {
                 Ok(e) => e,
                 Err(e) => {
-                    error!("Start DNSTT Server fail :{},Retrying", e);
+                    println!("Start DNSTT Server fail :{},Retrying", e);
                     continue;
                 }
             }
@@ -70,7 +69,7 @@ pub async fn run_application() {
             Ok(e) => e,
             Err(_) => continue,
         };
-        info!("New Client Conn :{}", addr);
+        println!("New Client Conn :{}", addr);
         tokio::spawn(async move {
             loop_read(stream).await;
             println!("Connection closed: {:?}", addr);
