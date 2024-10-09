@@ -22,7 +22,7 @@ struct ClientArgs {
     //dnstt 可执行文件名称，接受一个参数，为端口号
     #[arg(short, long)]
     exe: String,
-    //dnstt 可执行文件参数，端口号可用 ${port} 代替
+    //dnstt 可执行文件参数，端口号可用 $[port] 代替
     #[arg(short, long)]
     args: String,
     //定时切断连接的时间
@@ -56,7 +56,7 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
         .arg(arg.exe.clone())
         .args(
             arg.args
-                .replace("${port}", &arg.port.to_string())
+                .replace("$[port]", &arg.port.to_string())
                 .split(" ")
                 .collect::<Vec<_>>(),
         )
