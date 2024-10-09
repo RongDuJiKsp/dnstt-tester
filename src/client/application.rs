@@ -25,6 +25,9 @@ struct ClientArgs {
     //定时切断连接的时间
     #[arg(short, long)]
     reconnect_time_second: u64,
+    //定时重启连接的时间
+    #[arg(short, long)]
+    conn_time_second: u64,
     //定时发送随机文件的时间间隔
     #[arg(short, long)]
     make_file_second: u64,
@@ -71,6 +74,7 @@ async fn reconnect(
     sleep(Duration::from_secs(2)).await;
     client.kill().await?;
     sleep(Duration::from_secs(2)).await;
+    sleep(Duration::from_secs(arg.conn_time_second)).await;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
     *client = c;
     *stream = t;
