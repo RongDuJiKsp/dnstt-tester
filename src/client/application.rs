@@ -75,7 +75,8 @@ pub async fn run_application() {
     let (m_in, m_ax) = arg.file_size();
     let mut rand = RandomPacker::new(m_in, m_ax);
     let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
-    select! {
+    loop {
+        select! {
         _=sleep(Duration::from_secs(arg.make_file_second))=>{
             let r= send_file(&mut stream,&mut rand).await;
             Log::error_if_err(r);
@@ -84,5 +85,6 @@ pub async fn run_application() {
             let r= reconnect(&mut client,&mut stream,& arg).await;
             Log::error_if_err(r);
         }
+    }
     }
 }
