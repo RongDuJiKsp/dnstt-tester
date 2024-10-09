@@ -72,7 +72,7 @@ pub async fn run_application() {
         println!("New Client Conn :{}", addr);
         tokio::spawn(async move {
             loop_read(stream).await;
-            println!("Connection closed: {:?}", addr);
+            println!("Connection closed: {}", addr);
         });
     }
 }
