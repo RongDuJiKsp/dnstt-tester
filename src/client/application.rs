@@ -1,14 +1,14 @@
+use crate::common::child::load_env_and_run;
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
-use std::process::Stdio;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
-use tokio::process::{Child, Command};
+use tokio::process::Child;
 use tokio::select;
 use tokio::time::sleep;
 
@@ -52,19 +52,7 @@ impl ClientArgs {
 }
 //client端 启动dnstt client并且主动发起连接
 async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(Child, TcpStream)> {
-    let child = Command::new("")
-        .arg(arg.exe.clone())
-        .args(
-            arg.args
-                .replace("$[port]", &arg.port.to_string())
-                .split(" ")
-                .collect::<Vec<_>>(),
-        )
-        .kill_on_drop(true)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
+    let child = load_env_and_run(&arg.exe, &arg.args, arg.port)
         .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
     let tcp = TcpStream::connect(format!("127.0.0.1:{}", arg.port))

@@ -1,9 +1,9 @@
+use crate::common::child::load_env_and_run;
 use anyhow::anyhow;
 use clap::Parser;
-use std::process::Stdio;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::process::{Child, Command};
+use tokio::process::Child;
 
 #[derive(Parser)]
 struct ServerArgs {
@@ -20,19 +20,7 @@ struct ServerArgs {
     args: String,
 }
 async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
-    Command::new("sh")
-        .arg(args.exe.clone())
-        .args(
-            args.args
-                .replace("$[port]", &args.port.to_string())
-                .split(" ")
-                .collect::<Vec<_>>(),
-        )
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .kill_on_drop(true)
-        .spawn()
+    load_env_and_run(&args.exe, &args.args, args.port)
         .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
 }
 async fn loop_read(mut stream: TcpStream) {
