@@ -3,14 +3,16 @@ use crate::common::random::RandomPacker;
 use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
+use nix::unistd::Pid;
+use std::os::unix::process::CommandExt;
 use std::process::Stdio;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::process::{Child, Command};
-use tokio::select;
 use tokio::time::sleep;
+use tokio::{select, signal};
 
 #[derive(Debug, Parser)]
 struct ClientArgs {
@@ -65,15 +67,18 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     println!("start client and conn successfully");
     Ok((child, tcp))
 }
+fn kill(c: &mut Child) -> anyhow::Result<()> {
+    let pid = Pid::from_raw(child.id() as i32);
+    signal::kill(pid, Signal::SIGINT)?;
+    Ok(())
+}
 async fn reconnect(
     client: &mut Child,
     stream: &mut TcpStream,
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
     stream.shutdown().await?;
-    sleep(Duration::from_secs(2)).await;
-    client.kill().await?;
-    sleep(Duration::from_secs(2)).await;
+    kill(client)?;
     let _ = client.wait().await;
     println!("Waiting To Restart");
     sleep(Duration::from_secs(arg.conn_time_second)).await;
