@@ -55,6 +55,7 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     let child = load_env_and_run(&arg.exe, &arg.args, arg.port)
         .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
+    println!("{:?}", arg);
     let tcp = TcpStream::connect(format!("127.0.0.1:{}", arg.port))
         .await
         .map_err(|e| anyhow!("Failed to create tcp conn :{}", e))?;
