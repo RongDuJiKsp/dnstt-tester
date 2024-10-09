@@ -3,7 +3,6 @@ use crate::common::random::RandomPacker;
 use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
-use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
 use std::process::Stdio;
 use std::str::FromStr;
@@ -67,9 +66,9 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     println!("start client and conn successfully");
     Ok((child, tcp))
 }
-fn kill_ch(c: &mut Child) -> anyhow::Result<()> {
+async fn kill_ch(c: &mut Child) -> anyhow::Result<()> {
     let pid = Pid::from_raw(c.id().ok_or(anyhow!("NO id"))? as i32);
-    kill(pid, Signal::SIGINT)?;
+    Command::new("kill").arg(pid.to_string()).spawn()?.wait().await?;
     Ok(())
 }
 async fn reconnect(
@@ -78,7 +77,7 @@ async fn reconnect(
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
     stream.shutdown().await?;
-    kill_ch(client)?;
+    kill_ch(client).await?;
     let _ = client.wait().await;
     println!("Waiting To Restart");
     sleep(Duration::from_secs(arg.conn_time_second)).await;
