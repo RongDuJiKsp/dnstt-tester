@@ -1,7 +1,7 @@
 use std::process::Stdio;
 use anyhow::anyhow;
 use clap::Parser;
-use log::{error, info, log, warn};
+use log::{error, info, warn};
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::{Child, Command};
