@@ -47,7 +47,6 @@ pub async fn run_application() {
     let tcp = TcpListener::bind(&format!("127.0.0.1:{}", arg.port))
         .await
         .unwrap();
-    println!("{:?}", arg);
     tokio::spawn(async move {
         let mut server = new_server(&arg).await.unwrap();
         println!("dnstt Server Created");
