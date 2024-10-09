@@ -68,7 +68,13 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
 }
 async fn kill_ch(c: &mut Child) -> anyhow::Result<()> {
     let pid = Pid::from_raw(c.id().ok_or(anyhow!("NO id"))? as i32);
-    Command::new("kill").arg(pid.to_string()).spawn()?.wait().await?;
+    let r = Command::new("kill")
+        .arg("-9")
+        .arg(pid.to_string())
+        .spawn()?
+        .wait()
+        .await?;
+    println!("Kill {}", r.success());
     Ok(())
 }
 async fn reconnect(
@@ -78,7 +84,6 @@ async fn reconnect(
 ) -> anyhow::Result<()> {
     stream.shutdown().await?;
     kill_ch(client).await?;
-    let _ = client.wait().await;
     println!("Waiting To Restart");
     sleep(Duration::from_secs(arg.conn_time_second)).await;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
