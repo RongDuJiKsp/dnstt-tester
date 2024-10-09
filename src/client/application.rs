@@ -67,6 +67,7 @@ async fn reconnect(
     stream: &mut TcpStream,
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
+    client.kill().await?;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
     *client = c;
     *stream = t;
