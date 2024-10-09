@@ -7,7 +7,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
 use tokio::time;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 struct ServerArgs {
     //side 是需要运行的端点，可以是client or server
     side: String,
@@ -47,6 +47,7 @@ pub async fn run_application() {
     let tcp = TcpListener::bind(&format!("127.0.0.1:{}", arg.port))
         .await
         .unwrap();
+    println!("{:?}", arg);
     tokio::spawn(async move {
         let mut server = new_server(&arg).await.unwrap();
         println!("dnstt Server Created");
