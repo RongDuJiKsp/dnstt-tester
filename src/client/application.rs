@@ -55,7 +55,7 @@ async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(C
     let tcp = TcpStream::connect(format!("127.0.0.1:{}", arg.port))
         .await
         .map_err(|e| anyhow!("Failed to create tcp conn :{}", e))?;
-    info!("start client successfully");
+    info!("start client and conn successfully");
     Ok((child, tcp))
 }
 async fn reconnect(
