@@ -1,12 +1,14 @@
-use crate::common::child::run_exe_with_env;
+use crate::common::child::{bind_client_to_files, run_exe_with_env};
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
+use crate::common::sync::PtrFac;
 use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::process::Child;
@@ -30,7 +32,7 @@ struct ClientArgs {
     #[arg(short, long)]
     reconnect_time_second: u64,
     //定时重启连接的时间
-    #[arg(short, long)]
+    #[arg(long)]
     conn_time_second: u64,
     //定时发送随机文件的时间间隔
     #[arg(short, long)]
@@ -38,6 +40,15 @@ struct ClientArgs {
     //发送文件的大小范围，格式为xx~xx 单位为字节
     #[arg(short, long)]
     file_size_range: String,
+    //需要写入执行文件 stdin的文件
+    #[arg(long)]
+    stdin_file: String,
+    //转储stdout的文件
+    #[arg(long)]
+    stdout_file: String,
+    //转储stderr的文件
+    #[arg(long)]
+    stderr_file: String,
 }
 impl ClientArgs {
     fn file_size(&self) -> (u64, u64) {
@@ -51,8 +62,9 @@ impl ClientArgs {
         }
     }
 }
+type ProcessCtx = (Child, TcpStream);
 //client端 启动dnstt client并且主动发起连接
-async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<(Child, TcpStream)> {
+async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<ProcessCtx> {
     let child = run_exe_with_env(
         &args.exe,
         &args.args,
@@ -67,11 +79,8 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<(
     Ok((child, tcp))
 }
 
-async fn reconnect(
-    client: &mut Child,
-    stream: &mut TcpStream,
-    arg: &ClientArgs,
-) -> anyhow::Result<()> {
+async fn reconnect(ctx: &mut ProcessCtx, arg: &ClientArgs) -> anyhow::Result<()> {
+    let (client, stream) = ctx;
     println!("Shutdown Client ing...");
     stream.shutdown().await?;
     let _ = client.kill().await;
@@ -91,18 +100,46 @@ pub async fn run_application() {
     let arg = ClientArgs::parse();
     let (m_in, m_ax) = arg.file_size();
     let mut rand = RandomPacker::new(m_in, m_ax);
-    let (mut client, mut stream) = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
+    let file_stdin = PtrFac::share(
+        File::options()
+            .read(true)
+            .open(&arg.stdin_file)
+            .await
+            .unwrap(),
+    );
+    let file_stdout = PtrFac::share(
+        File::options()
+            .write(true)
+            .open(&arg.stdout_file)
+            .await
+            .unwrap(),
+    );
+    let file_stderr = PtrFac::share(
+        File::options()
+            .write(true)
+            .open(&arg.stderr_file)
+            .await
+            .unwrap(),
+    );
+    let mut pcx = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
+    bind_client_to_files(
+        &mut pcx.0,
+        file_stdin.clone(),
+        file_stdout.clone(),
+        file_stderr.clone(),
+    );
     let mut make_file_timer = Timer::timer(Duration::from_secs(arg.make_file_second));
     let mut reconnect_timer = Timer::timer(Duration::from_secs(arg.reconnect_time_second));
     loop {
         select! {
             _=make_file_timer.tick()=>{
-                let r= send_file(&mut stream,&mut rand).await;
+                let r= send_file(&mut pcx.1,&mut rand).await;
                 println!("tick to make file");
                 Log::error_if_err(r);
             }
             _=reconnect_timer.tick()=>{
-                let r= reconnect(&mut client,&mut stream,& arg).await;
+                let r= reconnect(&mut pcx,& arg).await;
+                bind_client_to_files(&mut pcx.0, file_stdin.clone(), file_stdout.clone(), file_stderr.clone());
                 println!("tick to restart");
                 Log::error_if_err(r);
             }

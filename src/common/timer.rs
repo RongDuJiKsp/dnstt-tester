@@ -1,4 +1,4 @@
-use std::mem;
+use crate::common::sync::Context;
 use std::time::Duration;
 use tokio::select;
 use tokio::sync::{mpsc, oneshot};
@@ -34,10 +34,10 @@ impl Timer {
     pub async fn tick(&mut self) {
         let _ = self.ticker.recv().await;
     }
-    pub fn cancel(&mut self) {
-        let mut can = None;
-        mem::swap(&mut can, &mut self.cancel_s);
-        if let Some(e) = can {
+}
+impl Context for Timer {
+    fn cancel(&mut self) {
+        if let Some(e) = self.cancel_s.take() {
             let _ = e.send(0);
         }
     }
