@@ -32,7 +32,7 @@ struct ClientArgs {
     #[arg(short, long)]
     reconnect_time_second: u64,
     //定时重启连接的时间
-    #[arg(long)]
+    #[arg(short, long)]
     conn_time_second: u64,
     //定时发送随机文件的时间间隔
     #[arg(short, long)]
@@ -70,7 +70,7 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<P
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
     let tcp = TcpStream::connect(format!("127.0.0.1:{}", args.port))
         .await
