@@ -1,17 +1,25 @@
+use std::collections::HashMap;
 use std::process::Stdio;
 use tokio::io;
 use tokio::process::{Child, Command};
-
-pub fn load_env_and_run(exe: &str, arg: &str, port: u16) -> io::Result<Child> {
+pub fn run_exe_with_env(
+    exe: &str,
+    raw_args: &str,
+    env: &HashMap<String, String>,
+) -> io::Result<Child> {
     Command::new(exe)
         .args(
-            arg.replace("&[port]", &port.to_string())
+            &env.iter()
+                .fold(raw_args.to_string(), |s, (from, to)| {
+                    s.replace(&format!("&[{}]", from), to)
+                })
                 .split(" ")
                 .filter(|x| *x != "")
                 .collect::<Vec<_>>(),
         )
         .kill_on_drop(true)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
 }

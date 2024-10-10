@@ -1,29 +1,34 @@
-use crate::common::child::load_env_and_run;
+use crate::common::child::run_exe_with_env;
 use anyhow::anyhow;
 use clap::Parser;
+use std::collections::HashMap;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
-use tokio::time;
+use tokio::time::sleep;
 
 #[derive(Parser, Debug)]
 struct ServerArgs {
     //side 是需要运行的端点，可以是client or server
     side: String,
-    //dnstt 将要执行的端口号
+    //隧道测试工具 将要监听的端口号
     #[arg(short, long)]
     port: u16,
-    //dnstt 可执行文件名称，接受一个参数，为端口号
+    //隧道工具可执行文件名称
     #[arg(short, long)]
     exe: String,
-    //dnstt 可执行文件参数，端口号可用 &[port] 代替
+    //隧道工具可执行文件参数，端口号可用 &[port] 代替
     #[arg(short, long, allow_hyphen_values = true)]
     args: String,
 }
 async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
-    load_env_and_run(&args.exe, &args.args, args.port)
-        .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
+    run_exe_with_env(
+        &args.exe,
+        &args.args,
+        &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
+    )
+    .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
 }
 async fn loop_read(mut stream: TcpStream) {
     let mut buf = [0u8; 1024];
@@ -31,12 +36,12 @@ async fn loop_read(mut stream: TcpStream) {
         match stream.read(&mut buf).await {
             Ok(size) => {
                 if size == 0 {
-                    println!("Client Read Close");
+                    println!("Client Pipe Close");
                     return;
                 }
             }
             Err(e) => {
-                println!("Client Read Err:{}", e);
+                println!("Client Read With Err:{}", e);
                 return;
             }
         }
@@ -49,12 +54,14 @@ pub async fn run_application() {
         .unwrap();
     tokio::spawn(async move {
         let mut server = new_server(&arg).await.unwrap();
-        println!("dnstt Server Created");
+        println!("Tunnel Server Created");
         loop {
-            let w = server.wait().await;
-            println!("dnstt exited because {:#?}", w);
-            time::sleep(Duration::from_secs(4)).await;
-            println!("restarting");
+            match server.wait().await {
+                Ok(e) => println!("Server Exited with code {}", e.code().unwrap_or_default()),
+                Err(e) => println!("Server Exited with err :{}", e),
+            }
+            sleep(Duration::from_secs(4)).await;
+            println!("Server restarting");
             server = match new_server(&arg).await {
                 Ok(e) => e,
                 Err(e) => {
@@ -69,10 +76,10 @@ pub async fn run_application() {
             Ok(e) => e,
             Err(_) => continue,
         };
-        println!("New Client Conn :{}", addr);
+        println!("New Client Conn Addr :{}", addr);
         tokio::spawn(async move {
             loop_read(stream).await;
-            println!("Connection closed: {}", addr);
+            println!("Connection Addr {} closed", addr);
         });
     }
 }

@@ -1,9 +1,10 @@
-use crate::common::child::load_env_and_run;
+use crate::common::child::run_exe_with_env;
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
@@ -51,11 +52,15 @@ impl ClientArgs {
     }
 }
 //client端 启动dnstt client并且主动发起连接
-async fn create_dnstt_client_and_tcp_conn(arg: &ClientArgs) -> anyhow::Result<(Child, TcpStream)> {
-    let child = load_env_and_run(&arg.exe, &arg.args, arg.port)
-        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<(Child, TcpStream)> {
+    let child = run_exe_with_env(
+        &args.exe,
+        &args.args,
+        &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
+    )
+    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
-    let tcp = TcpStream::connect(format!("127.0.0.1:{}", arg.port))
+    let tcp = TcpStream::connect(format!("127.0.0.1:{}", args.port))
         .await
         .map_err(|e| anyhow!("Failed to create tcp conn :{}", e))?;
     println!("start client and conn successfully");
@@ -67,10 +72,11 @@ async fn reconnect(
     stream: &mut TcpStream,
     arg: &ClientArgs,
 ) -> anyhow::Result<()> {
+    println!("Shutdown Client ing...");
     stream.shutdown().await?;
     let _ = client.kill().await;
     let _ = client.wait().await;
-    println!("Waiting To Restart");
+    println!("Waiting To Restart Client");
     sleep(Duration::from_secs(arg.conn_time_second)).await;
     let (c, t) = create_dnstt_client_and_tcp_conn(arg).await?;
     *client = c;
