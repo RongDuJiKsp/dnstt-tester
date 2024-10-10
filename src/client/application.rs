@@ -41,13 +41,13 @@ struct ClientArgs {
     #[arg(short, long)]
     file_size_range: String,
     //需要写入执行文件 stdin的文件
-    #[arg(long)]
+    #[arg(long = "in")]
     stdin_file: String,
     //转储stdout的文件
-    #[arg(long)]
+    #[arg(long = "out")]
     stdout_file: String,
     //转储stderr的文件
-    #[arg(long)]
+    #[arg(long = "err")]
     stderr_file: String,
 }
 impl ClientArgs {
