@@ -164,16 +164,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
-name = "dnstt-tester"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "rand",
- "tokio",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -436,6 +426,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tunnel-tool-tester"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "rand",
+ "tokio",
 ]
 
 [[package]]
