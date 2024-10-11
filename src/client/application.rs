@@ -6,10 +6,11 @@ use crate::common::timer::Timer;
 use anyhow::anyhow;
 use clap::Parser;
 use std::collections::HashMap;
+use std::io::SeekFrom;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::process::Child;
 use tokio::select;
@@ -139,9 +140,11 @@ pub async fn run_application() {
             }
             _=reconnect_timer.tick()=>{
                 let r= reconnect(&mut pcx,& arg).await;
+                let t= file_stdin.lock().await.seek(SeekFrom::Start(0)).await;
+                Log::error_if_err(r);
+                Log::error_if_err(t);
                 bind_client_to_files(&mut pcx.0, file_stdin.clone(), file_stdout.clone(), file_stderr.clone());
                 println!("tick to restart");
-                Log::error_if_err(r);
             }
         }
     }
