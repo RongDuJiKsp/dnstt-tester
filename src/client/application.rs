@@ -24,7 +24,7 @@ struct ClientArgs {
     #[arg(short, long)]
     port: u16,
     // dnstt 客户端程序将要绑定的ip
-    #[arg(long, default_value = "0.0.0.0")]
+    #[arg(long, default_value = "127.0.0.1")]
     bind: String,
     //dnstt 可执行文件名称，接受一个参数，为端口号
     #[arg(short, long)]
@@ -74,9 +74,9 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<P
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
-    let tcp = TcpStream::connect(format!("127.0.0.1:{}", args.port))
+    let tcp = TcpStream::connect(format!("{}:{}", args.bind, args.port))
         .await
         .map_err(|e| anyhow!("Failed to create tcp conn :{}", e))?;
     println!("start client and conn successfully");
