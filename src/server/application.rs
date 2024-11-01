@@ -8,15 +8,19 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
+use tokio::task::JoinHandle;
 use tokio::time::sleep;
 
 #[derive(Parser, Debug)]
 struct ServerArgs {
     //side 是需要运行的端点，可以是client or server
     side: String,
-    //隧道测试工具 将要监听的端口号
+    //隧道测试工具 将要为可执行文件参数的端口号
     #[arg(short, long)]
     port: u16,
+    //隧道测试工具将要监听的端口号组，用 "," 分割
+    #[arg(long, default_value = "")]
+    ports: String,
     //隧道工具可执行文件名称
     #[arg(short, long)]
     exe: String,
@@ -58,11 +62,25 @@ async fn loop_read(mut stream: TcpStream) {
         }
     }
 }
+pub async fn listen_ports(p: &str) -> Vec<TcpListener> {
+    let mut conns = Vec::new();
+    for port in p.split(",") {
+        conns.push(
+            TcpListener::bind(&format!("127.0.0.1:{}", port))
+                .await
+                .unwrap(),
+        )
+    }
+    conns
+}
 pub async fn run_application() {
     let arg = ServerArgs::parse();
-    let tcp = TcpListener::bind(&format!("127.0.0.1:{}", arg.port))
-        .await
-        .unwrap();
+    let conn = listen_ports(&if arg.ports.is_empty() {
+        format!("{}", arg.port)
+    } else {
+        arg.ports.clone()
+    })
+    .await;
     let file_stdin = PtrFac::share(
         File::options()
             .read(true)
@@ -115,15 +133,24 @@ pub async fn run_application() {
             );
         }
     });
-    loop {
-        let (stream, addr) = match tcp.accept().await {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-        println!("New Client Conn Addr :{}", addr);
-        tokio::spawn(async move {
-            loop_read(stream).await;
-            println!("Connection Addr {} closed", addr);
+    let mut hds: Vec<JoinHandle<()>> = Vec::new();
+    for con in conn {
+        let hd = tokio::spawn(async move {
+            loop {
+                let (stream, addr) = match con.accept().await {
+                    Ok(e) => e,
+                    Err(_) => break,
+                };
+                println!("New Client Conn Addr :{}", addr);
+                tokio::spawn(async move {
+                    loop_read(stream).await;
+                    println!("Connection Addr {} closed", addr);
+                });
+            }
         });
+        hds.push(hd);
+    }
+    for hd in hds {
+        let _ = hd.await;
     }
 }

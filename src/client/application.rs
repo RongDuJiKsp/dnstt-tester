@@ -74,7 +74,7 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<P
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
     let tcp = TcpStream::connect(format!("{}:{}", args.bind, args.port))
         .await
