@@ -1,4 +1,5 @@
 use crate::common::child::{bind_client_to_files, run_exe_with_env};
+use crate::common::sync::PtrFac;
 use anyhow::anyhow;
 use clap::Parser;
 use std::collections::HashMap;
@@ -8,7 +9,6 @@ use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
 use tokio::time::sleep;
-use crate::common::sync::PtrFac;
 
 #[derive(Parser, Debug)]
 struct ServerArgs {
@@ -39,7 +39,7 @@ async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-        .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
+    .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
 }
 async fn loop_read(mut stream: TcpStream) {
     let mut buf = [0u8; 1024];
