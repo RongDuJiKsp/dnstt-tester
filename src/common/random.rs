@@ -21,4 +21,15 @@ impl RandomPacker {
         self.rand_maker.fill_bytes(&mut buf);
         buf
     }
+    pub fn random_printable(&mut self) -> Vec<u8> {
+        let size = self.rand_maker.gen_range(self.min_size..=self.max_size);
+        let print_st = 32u8;
+        let print_ed = 126u8;
+        (0..size)
+            .map(|_| {
+                let random_char = rand::random::<u8>();
+                print_st + (random_char % (print_ed - print_st + 1))
+            })
+            .collect()
+    }
 }
