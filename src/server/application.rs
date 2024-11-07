@@ -45,7 +45,7 @@ async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-        .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
+    .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
 }
 async fn loop_read(mut stream: TcpStream) {
     let mut buf = [0u8; 1024];
@@ -131,7 +131,7 @@ pub async fn run_application() {
                 arg.ports.clone()
             },
         )
-            .await;
+        .await;
         loop {
             match server.wait().await {
                 Ok(e) => println!("Server Exited with code {}", e.code().unwrap_or_default()),
@@ -161,7 +161,7 @@ pub async fn run_application() {
                     arg.ports.clone()
                 },
             )
-                .await;
+            .await;
         }
     }
 }
