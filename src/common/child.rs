@@ -45,10 +45,7 @@ pub fn bind_client_to_files<
     TransferStdio::spawn_copy(stdout, PtrFac::share(o));
     TransferStdio::spawn_copy(stderr, PtrFac::share(e));
 }
-pub fn bind_half_to_files<
-    R: AsyncRead + Unpin + Send + 'static,
-    W: AsyncWrite + Unpin + Send + 'static,
->(
+pub fn bind_half_to_files<W: AsyncWrite + Unpin + Send + 'static>(
     client: &mut Child,
     stdout: Shared<W>,
     stderr: Shared<W>,
