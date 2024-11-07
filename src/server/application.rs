@@ -8,7 +8,6 @@ use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Child;
-use tokio::task::JoinHandle;
 use tokio::time::sleep;
 
 #[derive(Parser, Debug)]
@@ -46,7 +45,7 @@ async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-    .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
+        .map_err(|e| anyhow!("Failed To Run Server Because {}", e))
 }
 async fn loop_read(mut stream: TcpStream) {
     let mut buf = [0u8; 1024];
@@ -72,17 +71,27 @@ pub async fn listen_ports(i: &str, p: &str) -> Vec<TcpListener> {
     }
     conns
 }
+pub async fn make_conn(bind: &str, ports: &str) {
+    let conn = listen_ports(bind, ports).await;
+    for con in conn {
+        tokio::spawn(async move {
+            loop {
+                let (stream, addr) = match con.accept().await {
+                    Ok(e) => e,
+                    Err(_) => break,
+                };
+                println!("New Client Conn Addr :{}", addr);
+                tokio::spawn(async move {
+                    loop_read(stream).await;
+                    println!("Connection Addr {} closed", addr);
+                });
+            }
+        });
+    }
+}
 pub async fn run_application() {
     let arg = ServerArgs::parse();
-    let conn = listen_ports(
-        &arg.bind,
-        &if arg.ports.is_empty() {
-            format!("{}", arg.port)
-        } else {
-            arg.ports.clone()
-        },
-    )
-    .await;
+
     let file_stdin = PtrFac::share(
         File::options()
             .read(true)
@@ -104,7 +113,7 @@ pub async fn run_application() {
             .await
             .unwrap(),
     );
-    tokio::spawn(async move {
+    {
         let mut server = new_server(&arg).await.unwrap();
         println!("Tunnel Server Created");
         bind_client_to_files(
@@ -113,6 +122,16 @@ pub async fn run_application() {
             file_stdout.clone(),
             file_stderr.clone(),
         );
+        sleep(Duration::from_secs(5)).await; //等待5秒以启动
+        make_conn(
+            &arg.bind,
+            &if arg.ports.is_empty() {
+                format!("{}", arg.port)
+            } else {
+                arg.ports.clone()
+            },
+        )
+            .await;
         loop {
             match server.wait().await {
                 Ok(e) => println!("Server Exited with code {}", e.code().unwrap_or_default()),
@@ -133,26 +152,16 @@ pub async fn run_application() {
                 file_stdout.clone(),
                 file_stderr.clone(),
             );
+            sleep(Duration::from_secs(5)).await; //等待5秒以启动
+            make_conn(
+                &arg.bind,
+                &if arg.ports.is_empty() {
+                    format!("{}", arg.port)
+                } else {
+                    arg.ports.clone()
+                },
+            )
+                .await;
         }
-    });
-    let mut hds: Vec<JoinHandle<()>> = Vec::new();
-    for con in conn {
-        let hd = tokio::spawn(async move {
-            loop {
-                let (stream, addr) = match con.accept().await {
-                    Ok(e) => e,
-                    Err(_) => break,
-                };
-                println!("New Client Conn Addr :{}", addr);
-                tokio::spawn(async move {
-                    loop_read(stream).await;
-                    println!("Connection Addr {} closed", addr);
-                });
-            }
-        });
-        hds.push(hd);
-    }
-    for hd in hds {
-        let _ = hd.await;
     }
 }
