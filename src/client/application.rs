@@ -1,4 +1,4 @@
-use crate::common::child::{bind_client_to_files, run_exe_with_env};
+use crate::common::child::{bind_client_to_files, bind_half_to_files, run_exe_with_env};
 use crate::common::log::Log;
 use crate::common::random::RandomPacker;
 use crate::common::sync::PtrFac;
@@ -53,6 +53,8 @@ struct ClientArgs {
     //转储stderr的文件
     #[arg(long = "err")]
     stderr_file: String,
+    #[arg(long = "no_stdin")]
+    no_stdin: bool,
 }
 impl ClientArgs {
     fn file_size(&self) -> (u64, u64) {
@@ -74,7 +76,7 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<P
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
     let tcp = TcpStream::connect(format!("{}:{}", args.bind, args.port))
         .await
@@ -100,6 +102,7 @@ async fn send_file(stream: &mut TcpStream, rand: &mut RandomPacker) -> anyhow::R
     stream.write_all(&rand.random_bytes()).await?;
     Ok(())
 }
+
 pub async fn run_application() {
     let arg = ClientArgs::parse();
     let (m_in, m_ax) = arg.file_size();
@@ -126,12 +129,16 @@ pub async fn run_application() {
             .unwrap(),
     );
     let mut pcx = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
-    bind_client_to_files(
-        &mut pcx.0,
-        file_stdin.clone(),
-        file_stdout.clone(),
-        file_stderr.clone(),
-    );
+    if arg.no_stdin {
+        bind_half_to_files(&mut pcx.0, file_stdout.clone(), file_stderr.clone());
+    } else {
+        bind_client_to_files(
+            &mut pcx.0,
+            file_stdin.clone(),
+            file_stdout.clone(),
+            file_stderr.clone(),
+        );
+    }
     let mut make_file_timer = Timer::timer(Duration::from_secs(arg.make_file_second));
     let mut reconnect_timer = Timer::timer(Duration::from_secs(arg.reconnect_time_second));
     loop {
@@ -146,7 +153,16 @@ pub async fn run_application() {
                 let t= file_stdin.lock().await.seek(SeekFrom::Start(0)).await;
                 Log::error_if_err(r);
                 Log::error_if_err(t);
-                bind_client_to_files(&mut pcx.0, file_stdin.clone(), file_stdout.clone(), file_stderr.clone());
+                if arg.no_stdin {
+                     bind_half_to_files(&mut pcx.0, file_stdout.clone(), file_stderr.clone());
+                } else {
+                     bind_client_to_files(
+                     &mut pcx.0,
+                     file_stdin.clone(),
+                     file_stdout.clone(),
+                     file_stderr.clone(),
+                );
+                }
                 println!("tick to restart");
             }
         }
