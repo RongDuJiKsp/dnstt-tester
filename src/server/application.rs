@@ -24,6 +24,9 @@ struct ServerArgs {
     //隧道工具可执行文件名称
     #[arg(short, long)]
     exe: String,
+    // dnstt 服务程序将要绑定的ip
+    #[arg(long, default_value = "127.0.0.1")]
+    bind: String,
     //隧道工具可执行文件参数，端口号可用 &[port] 代替
     #[arg(short, long, allow_hyphen_values = true)]
     args: String,
@@ -62,24 +65,23 @@ async fn loop_read(mut stream: TcpStream) {
         }
     }
 }
-pub async fn listen_ports(p: &str) -> Vec<TcpListener> {
+pub async fn listen_ports(i: &str, p: &str) -> Vec<TcpListener> {
     let mut conns = Vec::new();
     for port in p.split(",") {
-        conns.push(
-            TcpListener::bind(&format!("127.0.0.1:{}", port))
-                .await
-                .unwrap(),
-        )
+        conns.push(TcpListener::bind(&format!("{}:{}", i, port)).await.unwrap())
     }
     conns
 }
 pub async fn run_application() {
     let arg = ServerArgs::parse();
-    let conn = listen_ports(&if arg.ports.is_empty() {
-        format!("{}", arg.port)
-    } else {
-        arg.ports.clone()
-    })
+    let conn = listen_ports(
+        &arg.bind,
+        &if arg.ports.is_empty() {
+            format!("{}", arg.port)
+        } else {
+            arg.ports.clone()
+        },
+    )
     .await;
     let file_stdin = PtrFac::share(
         File::options()
