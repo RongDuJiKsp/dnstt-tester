@@ -97,7 +97,7 @@ async fn reconnect(ctx: &mut ProcessCtx, arg: &ClientArgs) -> anyhow::Result<()>
     Ok(())
 }
 async fn send_file(stream: &mut TcpStream, rand: &mut RandomPacker) -> anyhow::Result<()> {
-    stream.write_all(&rand.random_printable_line()).await?;
+    stream.write_all(&rand.random_bytes()).await?;
     Ok(())
 }
 pub async fn run_application() {

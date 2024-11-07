@@ -22,6 +22,7 @@ impl RandomPacker {
         self.rand_maker.fill_bytes(&mut buf);
         buf
     }
+    #[allow(dead_code)]
     pub fn random_printable_line(&mut self) -> Vec<u8> {
         let size = self.rand_maker.gen_range(self.min_size..=self.max_size);
         let print_st = 32u8;
