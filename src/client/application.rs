@@ -76,7 +76,7 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<P
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
     let tcp = TcpStream::connect(format!("{}:{}", args.bind, args.port))
         .await
@@ -105,6 +105,7 @@ async fn send_file(stream: &mut TcpStream, rand: &mut RandomPacker) -> anyhow::R
 
 pub async fn run_application() {
     let arg = ClientArgs::parse();
+    println!("Tool run with args:{:?}", &arg);
     let (m_in, m_ax) = arg.file_size();
     let mut rand = RandomPacker::new(m_in, m_ax);
     let file_stdin = PtrFac::share(

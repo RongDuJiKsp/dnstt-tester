@@ -91,6 +91,7 @@ pub async fn make_conn(bind: &str, ports: &str) {
 }
 pub async fn run_application() {
     let arg = ServerArgs::parse();
+    println!("Tool run with args:{:?}", &arg);
 
     let file_stdin = PtrFac::share(
         File::options()
