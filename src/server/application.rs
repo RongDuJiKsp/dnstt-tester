@@ -67,7 +67,7 @@ async fn loop_read(mut stream: TcpStream) {
 pub async fn listen_ports(i: &str, p: &str) -> Vec<TcpListener> {
     let mut conns = Vec::new();
     for port in p.split(",") {
-        conns.push(TcpListener::bind(&format!("{}:{}", i, port)).await.unwrap())
+        conns.push(TcpListener::bind(&format!("{}:{}", i, port)).await.expect("Fail Bind Listener"))
     }
     conns
 }
@@ -97,24 +97,24 @@ pub async fn run_application() {
             .read(true)
             .open(&arg.stdin_file)
             .await
-            .unwrap(),
+            .expect("Failed Open Stdin File :"),
     );
     let file_stdout = PtrFac::share(
         File::options()
             .write(true)
             .open(&arg.stdout_file)
             .await
-            .unwrap(),
+            .expect("Failed Open Stdout File :"),
     );
     let file_stderr = PtrFac::share(
         File::options()
             .write(true)
             .open(&arg.stderr_file)
             .await
-            .unwrap(),
+            .expect("Failed Open Stderr File :"),
     );
     {
-        let mut server = new_server(&arg).await.unwrap();
+        let mut server = new_server(&arg).await.expect("Failed to start server:");
         println!("Tunnel Server Created");
         bind_client_to_files(
             &mut server,

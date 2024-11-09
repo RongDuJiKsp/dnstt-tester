@@ -112,23 +112,23 @@ pub async fn run_application() {
             .read(true)
             .open(&arg.stdin_file)
             .await
-            .unwrap(),
+            .expect("Stdin File:"),
     );
     let file_stdout = PtrFac::share(
         File::options()
             .write(true)
             .open(&arg.stdout_file)
             .await
-            .unwrap(),
+            .expect("Stdout File:"),
     );
     let file_stderr = PtrFac::share(
         File::options()
             .write(true)
             .open(&arg.stderr_file)
             .await
-            .unwrap(),
+            .expect("Stderr File:"),
     );
-    let mut pcx = create_dnstt_client_and_tcp_conn(&arg).await.unwrap();
+    let mut pcx = create_dnstt_client_and_tcp_conn(&arg).await.expect("Failed Init client and conn:");
     if arg.no_stdin {
         bind_half_to_files(&mut pcx.0, file_stdout.clone(), file_stderr.clone());
     } else {
