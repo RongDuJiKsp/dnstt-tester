@@ -113,21 +113,21 @@ pub async fn run_application() {
             .read(true)
             .open(&arg.stdin_file)
             .await
-            .expect("Stdin File:"),
+            .expect("Failed Open Stdin File "),
     );
     let file_stdout = PtrFac::share(
         File::options()
             .write(true)
             .open(&arg.stdout_file)
             .await
-            .expect("Stdout File:"),
+            .expect("Failed Open Stdout File "),
     );
     let file_stderr = PtrFac::share(
         File::options()
             .write(true)
             .open(&arg.stderr_file)
             .await
-            .expect("Stderr File:"),
+            .expect("Failed Open Stderr File "),
     );
     let mut pcx = create_dnstt_client_and_tcp_conn(&arg).await.expect("Failed Init client and conn:");
     if arg.no_stdin {
