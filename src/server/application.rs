@@ -30,13 +30,13 @@ struct ServerArgs {
     #[arg(short, long, allow_hyphen_values = true)]
     args: String,
     //需要写入执行文件 stdin的文件
-    #[arg(long = "in")]
+    #[arg(long = "in", default_value = "stdin")]
     stdin_file: String,
     //转储stdout的文件
-    #[arg(long = "out")]
+    #[arg(long = "out", default_value = "stdout")]
     stdout_file: String,
     //转储stderr的文件
-    #[arg(long = "err")]
+    #[arg(long = "err", default_value = "stderr")]
     stderr_file: String,
 }
 async fn new_server(args: &ServerArgs) -> anyhow::Result<Child> {
@@ -67,7 +67,11 @@ async fn loop_read(mut stream: TcpStream) {
 pub async fn listen_ports(i: &str, p: &str) -> Vec<TcpListener> {
     let mut conns = Vec::new();
     for port in p.split(",") {
-        conns.push(TcpListener::bind(&format!("{}:{}", i, port)).await.expect("Fail Bind Listener"))
+        conns.push(
+            TcpListener::bind(&format!("{}:{}", i, port))
+                .await
+                .expect("Fail Bind Listener"),
+        )
     }
     conns
 }

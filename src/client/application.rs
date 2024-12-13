@@ -45,13 +45,13 @@ struct ClientArgs {
     #[arg(short, long)]
     file_size_range: String,
     //需要写入执行文件 stdin的文件
-    #[arg(long = "in")]
+    #[arg(long = "in", default_value = "stdin")]
     stdin_file: String,
     //转储stdout的文件
-    #[arg(long = "out")]
+    #[arg(long = "out", default_value = "stdout")]
     stdout_file: String,
     //转储stderr的文件
-    #[arg(long = "err")]
+    #[arg(long = "err", default_value = "stderr")]
     stderr_file: String,
     #[arg(long = "no_stdin")]
     no_stdin: bool,
@@ -76,7 +76,7 @@ async fn create_dnstt_client_and_tcp_conn(args: &ClientArgs) -> anyhow::Result<P
         &args.args,
         &HashMap::from([(format!("{}", "port"), format!("{}", args.port))]),
     )
-        .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
+    .map_err(|e| anyhow!("Failed to create dnstt client :{}", e))?;
     sleep(Duration::from_secs(2)).await;
     let tcp = TcpStream::connect(format!("{}:{}", args.bind, args.port))
         .await
@@ -129,7 +129,9 @@ pub async fn run_application() {
             .await
             .expect("Failed Open Stderr File "),
     );
-    let mut pcx = create_dnstt_client_and_tcp_conn(&arg).await.expect("Failed Init client and conn:");
+    let mut pcx = create_dnstt_client_and_tcp_conn(&arg)
+        .await
+        .expect("Failed Init client and conn:");
     if arg.no_stdin {
         bind_half_to_files(&mut pcx.0, file_stdout.clone(), file_stderr.clone());
     } else {
